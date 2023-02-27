@@ -1,0 +1,14 @@
+name: deep
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - cudnn
+  - python=3.8
+  - keras-gpu=2.4.3
+  - pandas
+  - scikit-learn
+  - pip
+  - pip:
+    - yfinance
