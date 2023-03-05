@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, LSTM, LeakyReLU, Activation#, GRU
+from keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -71,14 +72,14 @@ def algorithm(X_train, y_train, X_test, y_test, n_steps):
     model.add(LSTM(50, activation=LeakyReLU(alpha=0.1)))
     model.add(Dropout(0.2))
     model.add(Dense(1))
-    # model.add(Activation('linear'))
+    model.add(Activation('softmax'))
     model.summary()
     # compile the model
     model.compile(optimizer='adam', loss='mse')
-
+    early_stop = EarlyStopping(monitor='val_loss', patience=15, mode='min', verbose=1)
     # fit the model to the training data
-    history = model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=2,
-                         validation_data=(X_test, y_test))
+    history = model.fit(X_train, y_train, epochs=500, batch_size=32, verbose=2,
+                         validation_data=(X_test, y_test),callbacks=[early_stop])
     # Plot the training and validation loss
     plt.plot(history.history['loss'], label='Training loss',color='r')
     plt.plot(history.history['val_loss'], label='Validation loss',color='b')
@@ -110,13 +111,26 @@ def plot_data(df,next_7_days):
     start_date = datetime.fromtimestamp(df.index[-1].timestamp())
     date_list = [start_date + timedelta(days=x) for x in range(7)]
     plt.figure(figsize=(15,8))
-    plt.plot(df.tail(120).index,df['Close'].tail(120).values,color='b',label='Past')
-    plt.plot(date_list,next_7_days,color='r',label='Future')
+    plt.plot(df.tail(120).index,df['Close'].tail(120).values,color='b',marker='*',label='Past')
+    plt.plot(date_list,next_7_days,color='r',marker='*',label='Future')
     plt.xlabel('Time')
     plt.ylabel('Price')
     plt.legend()
     plt.savefig('final_prediction.png',dpi=350)
-    # plt.show()
+
+def plot_data_multiple(df,save_forecasts):
+    start_date = datetime.fromtimestamp(df.index[-1].timestamp())
+    date_list = [start_date + timedelta(days=x) for x in range(7)]
+    plt.figure(figsize=(15,8))
+    plt.plot(df.tail(120).index,df['Close'].tail(120).values,color='b',marker='*',label='Past')
+    for i in range(0,5):
+        label_val = 'Future_' + str(i)
+        plt.plot(date_list,save_forecasts[i],marker='*',label=label_val)
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.show()
+    # 
 # for i in range(60, 2310):
 #     X_train.append(training_set[i-60:i])
 #     y_train.append(training_set[i])
@@ -179,9 +193,13 @@ def main():
     # prepare the data for input into the LSTM model
     X, y = prepare_data(df['Close'].values, n_steps)
     X_train, y_train, X_test, y_test = split_data(X,y)
-    model_val = algorithm(X_train, y_train, X_test, y_test, n_steps)
-    df, future_vals = predict_future(df,n_steps,model_val,scaler)
-    plot_data(df,future_vals)
+    save_forecasts = []
+    for i in range(0,5):
+        model_val = algorithm(X_train, y_train, X_test, y_test, n_steps)
+        df, future_vals = predict_future(df,n_steps,model_val,scaler)
+        save_forecasts.append(future_vals)
+    plot_data_multiple(df,save_forecasts)
+    # plot_data(df,future_vals)
     # print(X)
     # print(y)
 if __name__ == "__main__":
