@@ -127,9 +127,26 @@ def macd(data):
     data['signal_line'] = data['macd_diff'].ewm(span=9,min_periods=1).mean()
     return data
 
+def aroon_ind(data,lb=25):
+        """
+        AROON UP = [ 25 - PERIODS SINCE 25 PERIOD HIGH ] / 25 * [ 100 ]
+        AROON DOWN = [ 25 - PERIODS SINCE 25 PERIOD LOW ] / 25 * [ 100 ]
+        if up[i] >= 70 and down[i] <= 30: buy
+        if up[i] <= 30 and down[i] >= 70: sell
+        """
+        data['aroon_up'] = 100 * ((data['High'].rolling(lb).apply(lambda x: x.argmax())) / lb)
+        data['aroon_down'] = 100 * ((data['Low'].rolling(lb).apply(lambda x: x.argmin())) / lb)
+        return data
+
+def stoch_RSI(data):
+        min_val  = data['RSI'].rolling(window=14, center=False).min()
+        max_val = data['RSI'].rolling(window=14, center=False).max()
+        data['Stoch_RSI'] = ((data['RSI'] - min_val) / (max_val - min_val)) * 100
+        return data
+
 def split_x_y(df):
     X = df[['OBV', 'macd_diff', 'signal_line','MFI','ewmshort','ewmmedium','ewmlong',
-            'RSI_vol','RSI']].fillna(method='bfill')#.values[:-1]
+            'RSI_vol','RSI','aroon_up','Stoch_RSI']].fillna(method='bfill')#.values[:-1]
     #Make sure this is right
     Y = np.where(df['Close'].shift(-1).values > df['Close'].values, 1, 0)
     Y = np.pad(Y, (1, 0), mode='constant')
@@ -186,6 +203,14 @@ def run_model(X_train,y_train,X_test,y_test):
     model.add(LeakyReLU(alpha=0.2))
     model.add(BatchNormalization())
     model.add(Dropout(0.1))
+    model.add(Dense(9))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.1))
+    model.add(Dense(9))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    # model.add(Dropout(0.1))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     model.summary()
@@ -193,7 +218,7 @@ def run_model(X_train,y_train,X_test,y_test):
     #run this to see the tensorBoard: tensorboard --logdir=./logs
     tensorboard_callback = TensorBoard(log_dir="./logs")
     early_stop = EarlyStopping(monitor='val_loss', patience=100, mode='min', verbose=1)
-    model.fit(X_train,y_train,epochs=2500, batch_size=64, verbose=0,
+    model.fit(X_train,y_train,epochs=3000, batch_size=64, verbose=0,
                          validation_data=(X_test,y_test),callbacks=[tensorboard_callback]) #X_train.reshape(X_train.shape[0], X_train.shape[1], 1
     model.save('classify_deep.h5')
     # y_pred = model.predict(X_test.reshape(X_test.shape[0], X_test.shape[1], 1))
@@ -207,6 +232,8 @@ def main():
     df = moving_averages(df)
     df = money_flow_index(df)
     df = macd(df)
+    df = aroon_ind(df)
+    df = stoch_RSI(df)
     X_train, X_test, y_train, y_test = split_x_y(df)
     run_model(X_train,y_train,X_test,y_test)
 if __name__ == "__main__":
