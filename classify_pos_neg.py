@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from keras.layers import Dense, Dropout, LSTM, LeakyReLU, Activation#, GRU
+from keras.layers import Dense, Dropout, LSTM, LeakyReLU, Activation,BatchNormalization#, GRU
 from keras.models import Sequential
 # from tensorflow.keras.layers import LSTM, Dense
 # from tensorflow.keras.models import Sequential
@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, EarlyStopping
 from sklearn.ensemble import RandomForestClassifier
 from keras.models import load_model
 
@@ -135,6 +135,7 @@ def split_x_y(df):
     Y = np.pad(Y, (1, 0), mode='constant')
     Y = Y[:-1]
     df['label'] = Y
+    # df[['Close','label']].to_csv('check.csv',index=False)
     # print(df[['Close','label']].head(10))
     # input()
     scaler = StandardScaler()
@@ -156,19 +157,44 @@ def split_x_y(df):
     return X_train, X_test, y_train, y_test
 def run_model(X_train,y_train,X_test,y_test):
     model = Sequential()
-    model.add(Dense(5, activation=LeakyReLU(alpha=0.2), input_shape=(X_train.shape[1],)))
+    model = Sequential()
+    model.add(Dense(5, input_shape=(X_train.shape[1],)))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
     model.add(Dropout(0.1))
-    model.add(Dense(5, activation=LeakyReLU(alpha=0.2)))
+    model.add(Dense(5))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
     model.add(Dropout(0.1))
-    model.add(Dense(5, activation=LeakyReLU(alpha=0.2)))
+    model.add(Dense(5))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.1))
+    model.add(Dense(5))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.1))
+    model.add(Dense(5))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.1))
+    model.add(Dense(5))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.1))
+    model.add(Dense(5))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.1))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.summary()
     
+    #run this to see the tensorBoard: tensorboard --logdir=./logs
     tensorboard_callback = TensorBoard(log_dir="./logs")
-
-    history = model.fit(X_train,y_train,epochs=5000, batch_size=32, verbose=0,
+    early_stop = EarlyStopping(monitor='val_loss', patience=100, mode='min', verbose=1)
+    model.fit(X_train,y_train,epochs=2500, batch_size=64, verbose=0,
                          validation_data=(X_test,y_test),callbacks=[tensorboard_callback]) #X_train.reshape(X_train.shape[0], X_train.shape[1], 1
-    
     model.save('classify_deep.h5')
     # y_pred = model.predict(X_test.reshape(X_test.shape[0], X_test.shape[1], 1))
     # y_pred_class = np.where(y_pred > 0.5, 1, 0)
