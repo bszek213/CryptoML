@@ -2,10 +2,18 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.models import Sequential
+from keras.layers import Dense, Dropout, LSTM, LeakyReLU, Activation#, GRU
+from keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense
+# from tensorflow.keras.models import Sequential
 import yfinance as yf
 import numpy as np
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from keras.callbacks import TensorBoard
+from sklearn.ensemble import RandomForestClassifier
+from keras.models import load_model
 
 def get_ohlc(crypt):
     crypt_name = crypt + '-USD'
@@ -121,9 +129,50 @@ def macd(data):
 
 def split_x_y(df):
     X = df[['OBV', 'macd_diff', 'signal_line','MFI','ewmshort','ewmmedium','ewmlong',
-            'RSI_vol','RSI']].fillna(method='bfill').values[:-1]
+            'RSI_vol','RSI']].fillna(method='bfill')#.values[:-1]
     #Make sure this is right
-    Y = np.where(df['close'].shift(-1).values[:-1] > df['close'].values[:-1], 1, 0)
+    Y = np.where(df['Close'].shift(-1).values > df['Close'].values, 1, 0)
+    Y = np.pad(Y, (1, 0), mode='constant')
+    Y = Y[:-1]
+    df['label'] = Y
+    # print(df[['Close','label']].head(10))
+    # input()
+    scaler = StandardScaler()
+    X_scale = scaler.fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X_scale, Y, train_size=0.80, random_state=42)
+    # print(df[['Close','label']])
+    # input()
+    # # temp = df['label'].value_counts()
+    # # print(f'count how many positive and negative days: {temp}')
+    # train_size = int(len(X) * 0.80)
+    # X_train, X_test = X[:train_size], X[train_size:]
+    # y_train, y_test = Y[:train_size], Y[train_size:]
+    # print(len(X_train))
+    # print(len(y_train))
+    # print(len(X_test))
+    # print(len(y_test))
+    # input()
+
+    return X_train, X_test, y_train, y_test
+def run_model(X_train,y_train,X_test,y_test):
+    model = Sequential()
+    model.add(Dense(5, activation=LeakyReLU(alpha=0.2), input_shape=(X_train.shape[1],)))
+    model.add(Dropout(0.1))
+    model.add(Dense(5, activation=LeakyReLU(alpha=0.2)))
+    model.add(Dropout(0.1))
+    model.add(Dense(5, activation=LeakyReLU(alpha=0.2)))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    
+    tensorboard_callback = TensorBoard(log_dir="./logs")
+
+    history = model.fit(X_train,y_train,epochs=5000, batch_size=32, verbose=0,
+                         validation_data=(X_test,y_test),callbacks=[tensorboard_callback]) #X_train.reshape(X_train.shape[0], X_train.shape[1], 1
+    
+    model.save('classify_deep.h5')
+    # y_pred = model.predict(X_test.reshape(X_test.shape[0], X_test.shape[1], 1))
+    # y_pred_class = np.where(y_pred > 0.5, 1, 0)
+    # print(classification_report(y_test, y_pred_class))
 def main():
     df = get_ohlc('BTC')
     df = OBV(df)
@@ -132,6 +181,7 @@ def main():
     df = moving_averages(df)
     df = money_flow_index(df)
     df = macd(df)
-    split_x_y(df)
+    X_train, X_test, y_train, y_test = split_x_y(df)
+    run_model(X_train,y_train,X_test,y_test)
 if __name__ == "__main__":
     main()
