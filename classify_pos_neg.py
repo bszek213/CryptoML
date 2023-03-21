@@ -4,16 +4,20 @@ import numpy as np
 import tensorflow as tf
 from keras.layers import Dense, Dropout, LSTM, LeakyReLU, Activation,BatchNormalization#, GRU
 from keras.models import Sequential
+from keras import optimizers
 # from tensorflow.keras.layers import LSTM, Dense
 # from tensorflow.keras.models import Sequential
 import yfinance as yf
 import numpy as np
-from sklearn.metrics import classification_report
-from sklearn.model_selection import train_test_split
+# from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from keras.callbacks import TensorBoard, EarlyStopping
 from sklearn.ensemble import RandomForestClassifier
-from keras.models import load_model
+# from keras.models import load_model
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import joblib
 
 def get_ohlc(crypt):
     crypt_name = crypt + '-USD'
@@ -212,7 +216,7 @@ def run_model(X_train,y_train,X_test,y_test):
     model.add(BatchNormalization())
     # model.add(Dropout(0.1))
     model.add(Dense(1, activation='sigmoid'))
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer=optimizers.Adam(), metrics=['accuracy'])
     model.summary()
     
     #run this to see the tensorBoard: tensorboard --logdir=./logs
@@ -220,10 +224,39 @@ def run_model(X_train,y_train,X_test,y_test):
     early_stop = EarlyStopping(monitor='val_loss', patience=100, mode='min', verbose=1)
     model.fit(X_train,y_train,epochs=3000, batch_size=64, verbose=0,
                          validation_data=(X_test,y_test),callbacks=[tensorboard_callback]) #X_train.reshape(X_train.shape[0], X_train.shape[1], 1
-    model.save('classify_deep.h5')
+    # model.save('classify_deep.h5')
+    tf.keras.models.save_model(model,'classify_deep')
     # y_pred = model.predict(X_test.reshape(X_test.shape[0], X_test.shape[1], 1))
     # y_pred_class = np.where(y_pred > 0.5, 1, 0)
     # print(classification_report(y_test, y_pred_class))
+def random_forest(df):
+    X = df[['OBV', 'macd_diff', 'signal_line','MFI','ewmshort','ewmmedium','ewmlong',
+            'RSI_vol','RSI','aroon_up','Stoch_RSI']].fillna(method='bfill')#.values[:-1]
+    #Make sure this is right
+    Y = np.where(df['Close'].shift(-1).values > df['Close'].values, 1, 0)
+    Y = np.pad(Y, (1, 0), mode='constant')
+    Y = Y[:-1]
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.25, random_state=42)
+    RandForclass = RandomForestClassifier()
+    Rand_perm = {
+        'criterion' : ["gini","entropy"], #absolute_error - takes forever to run
+        'n_estimators': range(300,500,100),
+        # 'min_samples_split': np.arange(2, 5, 1, dtype=int),
+        'max_features' : [1, 'sqrt', 'log2'],
+        'max_depth': np.arange(2,8,1),
+        'min_samples_leaf': np.arange(1,3,1)
+        }
+    clf_rand = GridSearchCV(RandForclass, Rand_perm, 
+                        scoring=['accuracy'],
+                        cv=5,
+                        refit='accuracy',verbose=4, n_jobs=-1)
+    search_rand = clf_rand.fit(X_train,y_train)
+    joblib.dump(search_rand, "./classifierModelTuned.joblib", compress=9)
+    print('RandomForestClassifier - best params: ',search_rand.best_params_)
+    y_pred = search_rand.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    print("Accuracy:", acc)
+
 def main():
     df = get_ohlc('BTC')
     df = OBV(df)
@@ -235,6 +268,7 @@ def main():
     df = aroon_ind(df)
     df = stoch_RSI(df)
     X_train, X_test, y_train, y_test = split_x_y(df)
-    run_model(X_train,y_train,X_test,y_test)
+    # run_model(X_train,y_train,X_test,y_test)
+    random_forest(df)
 if __name__ == "__main__":
     main()

@@ -6,6 +6,12 @@ __pycache__/
 key.txt
 errors.log
 
+#Compression
+randomForestModelTuned.pkl
+randomForestModelTuned.joblib
+classifierModelTuned.joblib
+logs/
+
 # C extensions
 *.so
 
