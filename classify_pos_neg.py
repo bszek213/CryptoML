@@ -18,6 +18,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import joblib
+from sys import argv
 
 def get_ohlc(crypt):
     crypt_name = crypt + '-USD'
@@ -176,8 +177,7 @@ def split_x_y(df):
     # input()
 
     return X_train, X_test, y_train, y_test
-def run_model(X_train,y_train,X_test,y_test):
-    model = Sequential()
+def deep_model(X_train,y_train,X_test,y_test):
     model = Sequential()
     model.add(Dense(9, input_shape=(X_train.shape[1],)))
     model.add(LeakyReLU(alpha=0.2))
@@ -225,7 +225,8 @@ def run_model(X_train,y_train,X_test,y_test):
     model.fit(X_train,y_train,epochs=3000, batch_size=64, verbose=0,
                          validation_data=(X_test,y_test),callbacks=[tensorboard_callback]) #X_train.reshape(X_train.shape[0], X_train.shape[1], 1
     # model.save('classify_deep.h5')
-    tf.keras.models.save_model(model,'classify_deep')
+    model_name = argv[1] + "_model"
+    tf.keras.models.save_model(model,model_name)
     # y_pred = model.predict(X_test.reshape(X_test.shape[0], X_test.shape[1], 1))
     # y_pred_class = np.where(y_pred > 0.5, 1, 0)
     # print(classification_report(y_test, y_pred_class))
@@ -251,14 +252,18 @@ def random_forest(df):
                         cv=5,
                         refit='accuracy',verbose=4, n_jobs=-1)
     search_rand = clf_rand.fit(X_train,y_train)
-    joblib.dump(search_rand, "./classifierModelTuned.joblib", compress=9)
+    joblib_name = "./" + "classifier_" + argv[1] + ".joblib"
+    joblib.dump(search_rand, joblib_name, compress=9)
     print('RandomForestClassifier - best params: ',search_rand.best_params_)
     y_pred = search_rand.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     print("Accuracy:", acc)
 
 def main():
-    df = get_ohlc('BTC')
+    #Possible Cryptos: BTC, ETH, DOGE, LTC, SOL
+    print(f'creating model for {argv[1]}')
+    crypt = argv[1]
+    df = get_ohlc(crypt)
     df = OBV(df)
     df = RSI(df)
     df = vol_RSI(df)
@@ -268,7 +273,7 @@ def main():
     df = aroon_ind(df)
     df = stoch_RSI(df)
     X_train, X_test, y_train, y_test = split_x_y(df)
-    # run_model(X_train,y_train,X_test,y_test)
+    deep_model(X_train,y_train,X_test,y_test)
     random_forest(df)
 if __name__ == "__main__":
     main()
