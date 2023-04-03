@@ -19,6 +19,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import joblib
 from sys import argv
+import ta 
 
 def get_ohlc(crypt):
     crypt_name = crypt + '-USD'
@@ -38,50 +39,53 @@ def OBV(data):
         If the closing price of the asset is lower than the previous day?s closing price:
         OBV = Previous OBV - Current Day's Volume
         """
-        #TODO: add a linear regression lineover like 10-20 data points and use that 
-        # as a buy signal if it is positive
-        data['OBV'] = np.zeros(len(data))
-        # crypto_df_final['OBV'].iloc[0] = crypto_df_final['volume'].iloc[0]
-        OBV_iter = data['Volume'].iloc[0]
-        data['OBV'].iloc[0] = OBV_iter
-        for i in range(1,len(data['OBV'])):
-            if (data['Close'].iloc[i-1] < data['Close'].iloc[i]):
-                OBV_iter += data['Volume'].iloc[i]
-            if (data['Close'].iloc[i-1] > data['Close'].iloc[i]):
-                OBV_iter -= data['Volume'].iloc[i]
-            if (data['Close'].iloc[i-1] == data['Close'].iloc[i]):
-                OBV_iter += 0
-            data['OBV'].iloc[i] = OBV_iter
+        # #TODO: add a linear regression lineover like 10-20 data points and use that 
+        # # as a buy signal if it is positive
+        # data['OBV'] = np.zeros(len(data))
+        # # crypto_df_final['OBV'].iloc[0] = crypto_df_final['volume'].iloc[0]
+        # OBV_iter = data['Volume'].iloc[0]
+        # data['OBV'].iloc[0] = OBV_iter
+        # for i in range(1,len(data['OBV'])):
+        #     if (data['Close'].iloc[i-1] < data['Close'].iloc[i]):
+        #         OBV_iter += data['Volume'].iloc[i]
+        #     if (data['Close'].iloc[i-1] > data['Close'].iloc[i]):
+        #         OBV_iter -= data['Volume'].iloc[i]
+        #     if (data['Close'].iloc[i-1] == data['Close'].iloc[i]):
+        #         OBV_iter += 0
+        #     data['OBV'].iloc[i] = OBV_iter
+        data['OBV'] = ta.volume.OnBalanceVolumeIndicator(data['Close'], data['Volume']).on_balance_volume()
         return data
 
 def RSI(data):
-    update = pd.DataFrame()
-    update['change'] = data.Close.diff()
-    # crypto_df['U'] = [x if x > 0 else 0 for x in crypto_df.change]
-    # crypto_df['D'] = [abs(x) if x < 0 else 0 for x in crypto_df.change]
-    update['U']  = update['change'].clip(lower=0)
-    update['D'] = -1*update['change'].clip(upper=0)
-    update['U'] = update['U'].ewm(span=14,
-                min_periods=1).mean()
-    update['D'] = update['D'].ewm(span=14,
-                min_periods=1).mean()
-    update['RS'] = update['U'] / update['D']
-    data['RSI'] = 100 - (100/(1+update['RS']))
+    # update = pd.DataFrame()
+    # update['change'] = data.Close.diff()
+    # # crypto_df['U'] = [x if x > 0 else 0 for x in crypto_df.change]
+    # # crypto_df['D'] = [abs(x) if x < 0 else 0 for x in crypto_df.change]
+    # update['U']  = update['change'].clip(lower=0)
+    # update['D'] = -1*update['change'].clip(upper=0)
+    # update['U'] = update['U'].ewm(span=14,
+    #             min_periods=1).mean()
+    # update['D'] = update['D'].ewm(span=14,
+    #             min_periods=1).mean()
+    # update['RS'] = update['U'] / update['D']
+    # data['RSI'] = 100 - (100/(1+update['RS']))
+    data['RSI'] = ta.momentum.RSIIndicator(data['Close'], window=14).rsi()
     return data
 
 def vol_RSI(data):
-    update = pd.DataFrame()
-    update['change_vol'] = data.Volume.diff()
-    # crypto_df['U'] = [x if x > 0 else 0 for x in crypto_df.change]
-    # crypto_df['D'] = [abs(x) if x < 0 else 0 for x in crypto_df.change]
-    update['U_vol']  = update['change_vol'].clip(lower=0)
-    update['D_vol'] = -1*update['change_vol'].clip(upper=0)
-    update['U_vol'] = update.U_vol.ewm(span=14,
-                min_periods=1).mean()
-    update['D'] = update.D_vol.ewm(span=14,
-                min_periods=1).mean()
-    update['RS_vol'] = update.U_vol / update.D_vol
-    data['RSI_vol'] = 100 - (100/(1+update.RS_vol))
+    # update = pd.DataFrame()
+    # update['change_vol'] = data.Volume.diff()
+    # # crypto_df['U'] = [x if x > 0 else 0 for x in crypto_df.change]
+    # # crypto_df['D'] = [abs(x) if x < 0 else 0 for x in crypto_df.change]
+    # update['U_vol']  = update['change_vol'].clip(lower=0)
+    # update['D_vol'] = -1*update['change_vol'].clip(upper=0)
+    # update['U_vol'] = update.U_vol.ewm(span=14,
+    #             min_periods=1).mean()
+    # update['D'] = update.D_vol.ewm(span=14,
+    #             min_periods=1).mean()
+    # update['RS_vol'] = update.U_vol / update.D_vol
+    # data['RSI_vol'] = 100 - (100/(1+update.RS_vol))
+    data['RSI_vol'] = ta.momentum.RSIIndicator(data['Volume'], window=14).rsi()
     return data
 
 def moving_averages(data):
@@ -139,19 +143,86 @@ def aroon_ind(data,lb=25):
         if up[i] >= 70 and down[i] <= 30: buy
         if up[i] <= 30 and down[i] >= 70: sell
         """
-        data['aroon_up'] = 100 * ((data['High'].rolling(lb).apply(lambda x: x.argmax())) / lb)
-        data['aroon_down'] = 100 * ((data['Low'].rolling(lb).apply(lambda x: x.argmin())) / lb)
+        # data['aroon_up'] = 100 * ((data['High'].rolling(lb).apply(lambda x: x.argmax())) / lb)
+        # data['aroon_down'] = 100 * ((data['Low'].rolling(lb).apply(lambda x: x.argmin())) / lb)
+        aroon = ta.trend.AroonIndicator(data['Close'],window=25)
+        data['aroon'] = aroon.aroon_indicator()
         return data
 
 def stoch_RSI(data):
-        min_val  = data['RSI'].rolling(window=14, center=False).min()
-        max_val = data['RSI'].rolling(window=14, center=False).max()
-        data['Stoch_RSI'] = ((data['RSI'] - min_val) / (max_val - min_val)) * 100
+        # min_val  = data['RSI'].rolling(window=14, center=False).min()
+        # max_val = data['RSI'].rolling(window=14, center=False).max()
+        # data['Stoch_RSI'] = ((data['RSI'] - min_val) / (max_val - min_val)) * 100
+        data['Stoch_RSI'] = ta.momentum.StochRSIIndicator(data['RSI']).stochrsi()
         return data
+
+def volume_osc(data):
+    """
+    Volume Oscillator = [(Shorter Period SMA of Volume – Longer Period SMA of Volume)
+                            / Longer Period SMA of Volume ] * 100
+    """
+    short = data['Volume'].ewm(span=14,min_periods=13).mean() 
+    long = data['Volume'].ewm(span=28,min_periods=27).mean() 
+    data['volume_os'] = ((short - long) / long) * 100
+
+    return data
+
+def cmf_line(df):
+    """
+    If the CMF is above zero, it suggests that buying pressure is increasing and the price is likely to rise. 
+    If the CMF is below zero, it suggests that selling pressure is increasing and the price is likely to fall.
+    """
+    # Calculate the money flow multiplier
+    mf_mult = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
+    mf_mult = mf_mult.fillna(0) # Replace NaN values with 0
+
+    # Calculate the money flow volume
+    mf_vol = mf_mult * df['Volume']
+
+    # Calculate the cumulative money flow volume and volume
+    cumulative_mfv = mf_vol.cumsum()
+    cumulative_vol = df['Volume'].cumsum()
+
+    # Calculate the CMF
+    cmf = cumulative_mfv / cumulative_vol
+    cmf *= (2 * (df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
+    cmf[:2] = [np.nan, np.nan]
+
+    df['cmf'] = cmf
+
+    return df
+
+def vwma_macd(df):
+    # Calculate the volume-weighted moving average (VWMA) of the volume
+    df['VWMA'] = (df['Volume'] * (df['High'] + df['Low']) / 2).cumsum() / df['Volume'].cumsum()
+
+    # Calculate the 12-day and 26-day exponential moving averages (EMA) of the VWMA
+    ema12 = df['VWMA'].ewm(span=12, adjust=False).mean()
+    ema26 = df['VWMA'].ewm(span=26, adjust=False).mean()
+
+    # Calculate the MACD line as the difference between the 12-day and 26-day EMAs
+    macd_line = ema12 - ema26
+
+    # Calculate the 9-day EMA of the MACD line as the signal line
+    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+
+    # Calculate the MACD histogram as the difference between the MACD line and the signal line
+    macd_hist = macd_line - signal_line
+
+    df['vol_macd'] = macd_line
+    df['vol_macd_signal'] = signal_line
+
+    return df
+
+def force_index_indicator(df):
+    force = ta.volume.ForceIndexIndicator(df['close'],df['volume'])
+    df['force_index'] = force.force_index()
+    return df
 
 def split_x_y(df):
     X = df[['OBV', 'macd_diff', 'signal_line','MFI','ewmshort','ewmmedium','ewmlong',
-            'RSI_vol','RSI','aroon_up','Stoch_RSI']].fillna(method='bfill')#.values[:-1]
+            'RSI_vol','RSI','aroon','Stoch_RSI','volume_os','vol_macd','vol_macd_signal',
+            'cmf']].fillna(method='bfill')#.values[:-1]
     #Make sure this is right
     Y = np.where(df['Close'].shift(-1).values > df['Close'].values, 1, 0)
     Y = np.pad(Y, (1, 0), mode='constant')
@@ -232,7 +303,8 @@ def deep_model(X_train,y_train,X_test,y_test):
     # print(classification_report(y_test, y_pred_class))
 def random_forest(df):
     X = df[['OBV', 'macd_diff', 'signal_line','MFI','ewmshort','ewmmedium','ewmlong',
-            'RSI_vol','RSI','aroon_up','Stoch_RSI']].fillna(method='bfill')#.values[:-1]
+            'RSI_vol','RSI','aroon','Stoch_RSI','volume_os','vol_macd','vol_macd_signal',
+            'cmf']].fillna(method='bfill')#.values[:-1]
     #Make sure this is right
     Y = np.where(df['Close'].shift(-1).values > df['Close'].values, 1, 0)
     Y = np.pad(Y, (1, 0), mode='constant')
@@ -260,7 +332,7 @@ def random_forest(df):
     print("Accuracy:", acc)
 
 def main():
-    #Possible Cryptos: BTC, ETH, DOGE, LTC, SOL
+    #Possible Cryptos: BTC, ETH, DOGE, LTC, ADA, LINK
     print(f'creating model for {argv[1]}')
     crypt = argv[1]
     df = get_ohlc(crypt)
@@ -272,6 +344,9 @@ def main():
     df = macd(df)
     df = aroon_ind(df)
     df = stoch_RSI(df)
+    df = volume_osc(df)
+    df = cmf_line(df)
+    df = vwma_macd(df)
     X_train, X_test, y_train, y_test = split_x_y(df)
     deep_model(X_train,y_train,X_test,y_test)
     random_forest(df)
