@@ -11,6 +11,8 @@ from keras.callbacks import TensorBoard
 from sys import argv
 import os
 from tensorflow.keras.models import load_model
+from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 # Define the input and output data
 # def create_dataset(dataset, look_back=1):
 #     X, y = [], []
@@ -70,8 +72,9 @@ class nextDay():
         data = self.data_scaled
         self.X, self.y = prepare_data(data, self.n_steps)
     def algo(self):
-        if os.path.exists('LSTM_next_day_model.h5'):
-            self.model = load_model('LSTM_next_day_model.h5')
+        name = "LSTM_next_day_model" + self.crypto + ".h5"
+        if os.path.exists(name):
+            self.model = load_model(name)
         else:
             # Define the deep neural network model
             self.model = Sequential()
@@ -94,7 +97,7 @@ class nextDay():
                         batch_size=self.n_steps,verbose=1,
                         callbacks=[tensorboard_callback]
                         )
-            self.model.save('LSTM_next_day_model.h5')
+            self.model.save(name)
         # # Make predictions
         # y_pred = self.model.predict(self.X_test)
         # y_pred_unscaled = self.scaler.inverse_transform(np.concatenate((self.X_test[:, -1, :-1], y_pred.reshape(-1, 1)), axis=1))[:, -1]
@@ -103,22 +106,48 @@ class nextDay():
         # Print the predicted percent change for the next day
         # print(f'Predicted BTC percentage change for tomorrow: {y_pred_unscaled[-1]:.4f}')
     def predict_future(self):
-        # # use the model to predict the next 7 days of prices
-        # last_days = self.data['pct_change'].tail(self.n_steps).values.reshape(-1, 1)
-        # last_days = self.scaler.transform(last_days)
-        # last_days = last_days.reshape(1, self.n_steps, 1)
-        # pred = self.model.predict(last_days) #
-        # print(pred[0].shape)
-        # print(pred[0][0])
-        # # print the predicted prices for tomorrow days
-        # print('Predicted percent price for tomorrow: ', self.scaler.inverse_transform(pred[0][0].reshape(-1, 1)))
+        # # use the model to predict the next 2 days of prices
         last_days = self.data['pct_change'].tail(self.n_steps).values.reshape(-1, 1)
         last_days = self.scaler.transform(last_days)
         last_days = last_days.reshape(1, self.n_steps, 1)
         pred = self.model.predict(last_days)
         # extract the predicted price
+        self.future_change = self.scaler.inverse_transform(pred[0])
         predicted_price = self.scaler.inverse_transform(pred[0])[0][0]
         print('Predicted price for tomorrow: ', predicted_price)
+        #Save to file
+        dict_save = {'Tomorrow_predict_percent':[predicted_price*100],'date':[str(datetime.now())]}
+        filename = "next_day_"+self.crypto+'.csv'
+        file_exists = os.path.isfile(filename)
+        df = pd.DataFrame(dict_save)
+        if file_exists:
+            read_df = pd.read_csv(filename)
+            concat_df = pd.concat([read_df, df])
+            concat_df.to_csv(filename,index=False)
+        else:
+            df.to_csv(filename, index=False)
+
+    def plot_output(self):
+        # get tomorrow's date
+        tomorrow = datetime.now() + timedelta(days=1)
+        tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+        new_row = pd.DataFrame({
+            'Close': [0.0],  # replace with actual closing price for tomorrow
+            'pct_change': self.future_change[0]  # replace with actual percentage change for tomorrow
+        }, index=[tomorrow])
+        # append the new row to the DataFrame
+        self.data = self.data.append(new_row)
+        # sort the DataFrame by the 'Date' index
+        self.data.sort_index(inplace=True)
+        plt.figure(figsize=(16,8))
+        plt.title('Bitcoin Price Prediction')
+        plt.xlabel('Date')
+        plt.ylabel('Percent change')
+        split_idx = int(len(self.X) * 0.999)
+        plt.plot(self.data.index[split_idx:], self.data['pct_change'].iloc[split_idx:], label='Actual Price')
+        plt.plot(self.data.index[-2:], self.data['pct_change'].iloc[-2:],marker='*', color='tab:orange',label='Predicted Price')
+        plt.legend()
+        plt.show()
     def run_analysis(self):
         self.read_data()
         self.get_percent_change()
@@ -127,6 +156,7 @@ class nextDay():
         self.split_data()
         self.algo()
         self.predict_future()
+        self.plot_output()
 def main():
     nextDay().run_analysis()
 if __name__ == "__main__":
