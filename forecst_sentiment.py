@@ -21,22 +21,42 @@ if argv[1] == 'crypto':
     df = data.rename(columns={'date': 'ds', 'Close': 'y'})
     df = df[['ds','y']]
 
+if argv[1] == "all":
+    name = argv[2]
+    data = pd.read_csv("/home/bszekely/Desktop/crypto_short_update/fear_greed_all_cryptos.csv")
+    #data['date'] = pd.datetime(data['timestamp'])
+    df = data.rename(columns={'timestamp': 'ds', name : 'y'})
+    df = df[['ds','y']]
+    #df['ds'] = df['ds'].str.split().str[0]
+    df['ds'] = pd.to_datetime(df['ds'])
+    df = df.dropna()
+
 # Create and fit the Prophet model
 model = Prophet()
 model.fit(df)
 
 # Perform cross-validation to tune the model parameters
 # cutoffs = pd.date_range(start='2021-03-01', end='2021-03-21', freq='3D')
-df_cv = cross_validation(model, initial='180 days', period='3 days', horizon='7 days')
+if argv[1] == "all":
+    df_cv = cross_validation(model, initial='72 hours', period='1 hours', horizon='30 minutes')
+else:
+    df_cv = cross_validation(model, initial='180 days', period='3 days', horizon='7 days')
 
+if argv[1] == "all":
+    # Predict the next 7 days
+    future = model.make_future_dataframe(periods=1*24*4, freq='15T') # 1 days, 15 minutes interval
+    forecast = model.predict(future)
+    predicted_values = forecast['yhat'][-1*24*4:] # last 1 days, 15 minutes interval
+else:
+    # Predict the next 7 days
+    future = model.make_future_dataframe(periods=7)
+    forecast = model.predict(future)
+    predicted_values = forecast['yhat'][-7:]
 # Get the RMSE of the fit to the data
 df_p = performance_metrics(df_cv)
+print('=====================')
 print(df_p.iloc[0])
-# Predict the next 7 days
-future = model.make_future_dataframe(periods=7)
-forecast = model.predict(future)
-predicted_values = forecast['yhat'][-7:]
-
+print('=====================')
 if argv[2]:
     title_name = argv[2]
 else:
