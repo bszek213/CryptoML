@@ -55,6 +55,7 @@ class nextDay():
         # Normalize the data
         self.scaler = MinMaxScaler()
         self.data_scaled = self.scaler.fit_transform(self.data['pct_change'].values.reshape(-1,1))
+        # self.data_scaled = self.data['pct_change'].to_numpy().reshape(-1,1)
     def split_data(self):
         # Split the data into training and test sets
         # train_size = int(len(self.data) * 0.75)
@@ -78,11 +79,11 @@ class nextDay():
         else:
             # Define the deep neural network model
             self.model = Sequential()
-            self.model.add(LSTM(units=32, activation='relu', return_sequences=True, input_shape=(self.n_steps, 1)))
-            self.model.add(Dropout(0.2))
             self.model.add(LSTM(units=16, activation='relu', return_sequences=True, input_shape=(self.n_steps, 1)))
             self.model.add(Dropout(0.2))
             self.model.add(LSTM(units=8, activation='relu', return_sequences=True, input_shape=(self.n_steps, 1)))
+            self.model.add(Dropout(0.2))
+            self.model.add(LSTM(units=4, activation='relu', return_sequences=True, input_shape=(self.n_steps, 1)))
             # self.model.add(Dropout(0.2))
             # self.model.add(LSTM(units=8, activation='relu'))
             self.model.add(Dropout(0.2))
@@ -92,7 +93,7 @@ class nextDay():
             # Train the model
             #run this to see the tensorBoard: tensorboard --logdir=./logs
             tensorboard_callback = TensorBoard(log_dir="./logs")
-            self.model.fit(self.X_train, self.y_train, epochs=50, 
+            self.model.fit(self.X_train, self.y_train, epochs=100, 
                         validation_data=(self.X_test, self.y_test),
                         batch_size=self.n_steps,verbose=1,
                         callbacks=[tensorboard_callback]
@@ -108,15 +109,21 @@ class nextDay():
     def predict_future(self):
         # # use the model to predict the next 2 days of prices
         last_days = self.data['pct_change'].tail(self.n_steps).values.reshape(-1, 1)
+
         last_days = self.scaler.transform(last_days)
         last_days = last_days.reshape(1, self.n_steps, 1)
         pred = self.model.predict(last_days)
+
         # extract the predicted price
+        # self.future_change = pred
         self.future_change = self.scaler.inverse_transform(pred[0])
         predicted_price = self.scaler.inverse_transform(pred[0])[0][0]
+        # predicted_price = pred[0]
+    
         print('Predicted price for tomorrow: ', predicted_price)
         #Save to file
-        dict_save = {'Tomorrow_predict_percent':[predicted_price*100],'date':[str(datetime.now())]}
+        tomorrow = datetime.now() + timedelta(days=1)
+        dict_save = {'predict_percent':[predicted_price*100],'date':[str(tomorrow)]}
         filename = "next_day_"+self.crypto+'.csv'
         file_exists = os.path.isfile(filename)
         df = pd.DataFrame(dict_save)
@@ -127,7 +134,28 @@ class nextDay():
         else:
             df.to_csv(filename, index=False)
 
-    def plot_output(self):
+    def plot_forecast(self):
+        today = datetime.now()
+        time_array = pd.date_range(start=today, periods=self.n_steps, freq='D')
+        list_new_close = []
+        print(self.future_change)
+        data_start = self.data['Close'].iloc[-1]
+        for datum in self.future_change:
+            data_start = float(data_start + (data_start * datum))
+            list_new_close.append(data_start)
+        new_data = pd.DataFrame({
+            'Close': list_new_close,
+            'pct_change': self.future_change.flatten()
+        },index=time_array)
+        plt.figure(figsize=(16,8))
+        plt.title(f'{argv[1]} Price')
+        plt.xlabel('Date')
+        plt.ylabel('Price')
+        plt.plot(self.data.index[-30:], self.data['Close'].iloc[-30:], label='Actual Price',color='tab:blue')
+        plt.plot(new_data.index, new_data['Close'], label='Predicted Price',color='tab:orange',marker='*')
+        plt.legend()
+        plt.show()
+    def plot_next_day(self):
         # get tomorrow's date
         tomorrow = datetime.now() + timedelta(days=1)
         tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -156,7 +184,7 @@ class nextDay():
         self.split_data()
         self.algo()
         self.predict_future()
-        self.plot_output()
+        self.plot_forecast()
 def main():
     nextDay().run_analysis()
 if __name__ == "__main__":
