@@ -23,7 +23,12 @@ if argv[1] == 'crypto':
 
 if argv[1] == "all":
     name = argv[2]
-    data = pd.read_csv("/home/bszekely/Desktop/crypto_short_update/fear_greed_all_cryptos.csv")
+    loc_1 = "/home/brianszekely/Desktop/ProjectsResearch/technical-analysis-crypto/fear_greed_all_cryptos.csv"
+    loc_2 = "/home/bszekely/Desktop/crypto_short_update/fear_greed_all_cryptos.csv"
+    data = pd.read_csv(loc_1)
+    print('=====================')
+    print(f'Data Length: {len(data)}')
+    print('=====================')
     #data['date'] = pd.datetime(data['timestamp'])
     df = data.rename(columns={'timestamp': 'ds', name : 'y'})
     df = df[['ds','y']]
