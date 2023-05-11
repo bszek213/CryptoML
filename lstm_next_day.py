@@ -11,6 +11,7 @@ from keras.callbacks import TensorBoard
 from sys import argv
 import os
 from tensorflow.keras.models import load_model
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 # Define the input and output data
@@ -49,12 +50,13 @@ class nextDay():
     def get_percent_change(self):
         # Prepare the data
         self.data = self.data[['Close']]
-        self.data['pct_change'] = self.data['Close'].pct_change()
+        # self.data['pct_change'] = self.data['Close'].pct_change()
         self.data = self.data.dropna()
     def normalize_data(self):
         # Normalize the data
         self.scaler = MinMaxScaler()
-        self.data_scaled = self.scaler.fit_transform(self.data['pct_change'].values.reshape(-1,1))
+        self.data_scaled = self.scaler.fit_transform(self.data['Close'].values.reshape(-1,1))
+        # self.data_scaled = self.scaler.fit_transform(self.data['pct_change'].values.reshape(-1,1))
         # self.data_scaled = self.data['pct_change'].to_numpy().reshape(-1,1)
     def split_data(self):
         # Split the data into training and test sets
@@ -73,7 +75,7 @@ class nextDay():
         data = self.data_scaled
         self.X, self.y = prepare_data(data, self.n_steps)
     def algo(self):
-        name = "LSTM_next_day_model" + self.crypto + ".h5"
+        name = "LSTM_next_day_model_" + self.crypto + ".h5"
         if os.path.exists(name):
             self.model = load_model(name)
         else:
@@ -87,16 +89,19 @@ class nextDay():
             # self.model.add(Dropout(0.2))
             # self.model.add(LSTM(units=8, activation='relu'))
             self.model.add(Dropout(0.2))
-            self.model.add(Dense(units=1, activation='linear'))
-            self.model.compile(loss='mean_squared_error', optimizer=Adam(lr=0.001))
+            self.model.add(Dense(units=1, activation='linear')) #I can use this as I only have positive values
+            self.model.compile(loss='mean_squared_error', optimizer=Adam(lr=0.0001))
             self.model.summary()
             # Train the model
             #run this to see the tensorBoard: tensorboard --logdir=./logs
-            tensorboard_callback = TensorBoard(log_dir="./logs")
+            # tensorboard_callback = TensorBoard(log_dir="./logs")
+            # Define the ReduceLROnPlateau callback
+            lr_reducer = ReduceLROnPlateau(factor=0.1, patience=10, verbose=1)
+            es = EarlyStopping(monitor="val_loss", min_delta=0.005, verbose=1, patience=15, restore_best_weights=True)
             self.model.fit(self.X_train, self.y_train, epochs=100, 
                         validation_data=(self.X_test, self.y_test),
                         batch_size=self.n_steps,verbose=1,
-                        callbacks=[tensorboard_callback]
+                        callbacks=[lr_reducer,es]
                         )
             self.model.save(name)
         # # Make predictions
@@ -108,17 +113,14 @@ class nextDay():
         # print(f'Predicted BTC percentage change for tomorrow: {y_pred_unscaled[-1]:.4f}')
     def predict_future(self):
         # # use the model to predict the next 2 days of prices
-        last_days = self.data['pct_change'].tail(self.n_steps).values.reshape(-1, 1)
-
+        # last_days = self.data['pct_change'].tail(self.n_steps).values.reshape(-1, 1)
+        last_days = self.data['Close'].tail(self.n_steps).values.reshape(-1, 1)
         last_days = self.scaler.transform(last_days)
         last_days = last_days.reshape(1, self.n_steps, 1)
         pred = self.model.predict(last_days)
-
         # extract the predicted price
-        # self.future_change = pred
         self.future_change = self.scaler.inverse_transform(pred[0])
         predicted_price = self.scaler.inverse_transform(pred[0])[0][0]
-        # predicted_price = pred[0]
     
         print('Predicted price for tomorrow: ', predicted_price)
         #Save to file
@@ -134,7 +136,7 @@ class nextDay():
         else:
             df.to_csv(filename, index=False)
 
-    def plot_forecast(self):
+    def plot_forecast_pct_change(self):
         today = datetime.now()
         time_array = pd.date_range(start=today, periods=self.n_steps, freq='D')
         list_new_close = []
@@ -155,6 +157,23 @@ class nextDay():
         plt.plot(new_data.index, new_data['Close'], label='Predicted Price',color='tab:orange',marker='*')
         plt.legend()
         plt.show()
+    
+    def plot_forecast_close(self):
+        today = datetime.now()
+        time_array = pd.date_range(start=today, periods=self.n_steps, freq='D')
+        # print(self.future_change)
+        new_data = pd.DataFrame({
+            'Close_new': self.future_change.flatten()
+        },index=time_array)
+        plt.figure(figsize=(16,8))
+        plt.title(f'{argv[1]} Price')
+        plt.xlabel('Date')
+        plt.ylabel('Price')
+        plt.plot(self.data.index[-30:], self.data['Close'].iloc[-30:], label='Actual Price',color='tab:blue')
+        plt.plot(new_data.index, new_data['Close_new'], label='Predicted Price',color='tab:orange',marker='*')
+        plt.legend()
+        plt.show()
+
     def plot_next_day(self):
         # get tomorrow's date
         tomorrow = datetime.now() + timedelta(days=1)
@@ -184,7 +203,7 @@ class nextDay():
         self.split_data()
         self.algo()
         self.predict_future()
-        self.plot_forecast()
+        self.plot_forecast_close()
 def main():
     nextDay().run_analysis()
 if __name__ == "__main__":
