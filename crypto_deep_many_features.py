@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import ta
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -20,13 +20,17 @@ class changePricePredictor:
         self.n_outputs = n_outputs
         self.n_epochs = n_epochs
         self.batch_size = batch_size
-        self.scaler = MinMaxScaler()
         crypt_name = crypt + '-USD'
         temp = yf.Ticker(crypt_name)
         price_data = temp.history(period = 'max', interval="1d")
         print(Fore.GREEN,f'NUMBER OF SAMPLES FOR {crypt_name}: {len(price_data)}',Style.RESET_ALL)
-        self.features = ['Close', 'Low', 'High', 'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt', 'volume_em', 'trend_aroon_up', 'trend_macd_diff', 'volume_obv']
-        self.non_close_features = ['Low', 'High', 'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt', 'volume_em', 'trend_aroon_up', 'trend_macd_diff', 'volume_obv']
+        self.features = ['Close', 'Low', 'High', 
+                         'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt',
+                           'volume_em', 'trend_aroon_up', 
+                           'volume_obv','volatility_bbp']
+        self.non_close_features = ['Low', 'High', 'momentum_stoch_rsi', 
+                                   'trend_aroon_down', 'volume_vpt', 'volume_em',
+                                     'trend_aroon_up', 'volume_obv']
         self.n_features = len(self.features)
         self.data = ta.add_all_ta_features(
             price_data,
@@ -45,7 +49,7 @@ class changePricePredictor:
 
         # Scale data
         # self.scaler1 = MinMaxScaler(feature_range=(0, 1))
-        self.scaler2 = MinMaxScaler(feature_range=(0, 1))
+        self.scaler2 = MinMaxScaler(feature_range=(-1, 1))
         # Scale data
         data_close = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1)
         # data_close = data[['Close']]
@@ -99,7 +103,7 @@ class changePricePredictor:
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dense(self.n_outputs,activation="tanh")
         ])
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr_schedule),loss='mse')
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr_schedule),loss='mean_squared_error')
         return model
 
     def train_model(self, X_train, y_train, X_val, y_val):
@@ -142,6 +146,9 @@ class changePricePredictor:
             y_pred = y_pred.flatten()
             print(Fore.RED,y_pred,Style.RESET_ALL)
             print(Fore.GREEN,test.flatten(),Style.RESET_ALL)
+            plt.hist(y_pred,color='r',alpha=0.3)
+            plt.hist(test.flatten(),color='g',alpha=0.3)
+            plt.show()
             # y_pred = self.scaler1.inverse_transform(y_pred)[0]
 
             #check accuracy of prediction   

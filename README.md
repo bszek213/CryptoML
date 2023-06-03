@@ -1,6 +1,11 @@
 # Cryptocurrency Time Series Forecasting
 
-machine learning for cryptocurrency with yfinance and kraken
+Deep learning, mainly LSTMs, for cryptocurrency with yfinance
+
+Current MAPE on test data for different cryptocurrencies:
+BTC: 127.45% error
+ETH: 184.52% error
+DOGE: 307.97% error
 
 ## Installation
 ```bash
@@ -13,7 +18,8 @@ bash -i bash_conda_install.sh
 
 ```python
 # Time Series Forecasting - cumulative log returns
-python lstm_forecast.py
+python cryoto_deep_many_features.py BTC test
+python cryoto_deep_many_features.py BTC future
 ```
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
