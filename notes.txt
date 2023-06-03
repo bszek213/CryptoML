@@ -1,0 +1,52 @@
+Test Loss: 0.0020551951602101326
+['Close', 'Low', 'High', 'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt', 'volume_em', 'trend_aroon_up', 'trend_macd_diff']
+
+BitcoinPricePredictor(crypt="BTC",
+                    n_features=9, 
+                    n_steps=60, 
+                    n_outputs=30, 
+                    n_epochs=250, 
+                    batch_size=64).run_analysis()
+
+======================================================================================================
+
+Test Loss: 0.0020158537663519382
+['Close', 'Low', 'High', 'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt', 'volume_em', 'trend_aroon_up', 'trend_macd_diff']
+ BitcoinPricePredictor(crypt="BTC",
+                    n_features=9, 
+                    n_steps=60, 
+                    n_outputs=30, 
+                    n_epochs=250, 
+                    batch_size=128).run_analysis()
+
+======================================================================================================
+
+Test Loss: 0.00204124441370368
+['Close', 'Low', 'High', 'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt', 'volume_em', 'trend_aroon_up', 'trend_macd_diff', 'volume_obv']
+BitcoinPricePredictor(crypt="BTC",
+                    n_features=10, 
+                    n_steps=60, 
+                    n_outputs=30, 
+                    n_epochs=250, 
+                    batch_size=128).run_analysis()
+
+======================================================================================================
+
+Test Loss: 0.002028038026764989
+['Close', 'Low', 'High', 'volume_adi', 'volume_obv', 'volume_cmf', 'volume_fi', 'volume_em', 'volume_sma_em', 'volume_vpt', 'volume_vwap', 'volume_mfi', 'volume_nvi', 'volatility_bbm', 'volatility_bbh', 'volatility_bbl', 'volatility_bbw', 'volatility_bbp', 'volatility_bbhi', 'volatility_bbli', 'volatility_kcc', 'volatility_kch', 'volatility_kcl', 'volatility_kcw', 'volatility_kcp', 'volatility_kchi', 'volatility_kcli', 'volatility_dcl', 'volatility_dch', 'volatility_dcm', 'volatility_dcw', 'volatility_dcp', 'volatility_atr', 'volatility_ui', 'trend_macd', 'trend_macd_signal', 'trend_macd_diff', 'trend_sma_fast', 'trend_sma_slow', 'trend_ema_fast', 'trend_ema_slow', 'trend_vortex_ind_pos', 'trend_vortex_ind_neg', 'trend_vortex_ind_diff', 'trend_trix', 'trend_mass_index', 'trend_dpo', 'trend_kst', 'trend_kst_sig', 'trend_kst_diff', 'trend_ichimoku_conv', 'trend_ichimoku_base', 'trend_ichimoku_a', 'trend_ichimoku_b', 'trend_stc', 'trend_adx', 'trend_adx_pos', 'trend_adx_neg', 'trend_cci', 'trend_visual_ichimoku_a', 'trend_visual_ichimoku_b', 'trend_aroon_up', 'trend_aroon_down', 'trend_aroon_ind', 'trend_psar_up', 'trend_psar_down', 'trend_psar_up_indicator', 'trend_psar_down_indicator', 'momentum_rsi', 'momentum_stoch_rsi', 'momentum_stoch_rsi_k', 'momentum_stoch_rsi_d', 'momentum_tsi', 'momentum_uo', 'momentum_stoch', 'momentum_stoch_signal', 'momentum_wr', 'momentum_ao', 'momentum_roc', 'momentum_ppo', 'momentum_ppo_signal', 'momentum_ppo_hist', 'momentum_pvo', 'momentum_pvo_signal', 'momentum_pvo_hist', 'momentum_kama']
+BitcoinPricePredictor(crypt="BTC",
+                    n_features=10, 
+                    n_steps=60, 
+                    n_outputs=30, 
+                    n_epochs=250, 
+                    batch_size=128).run_analysis()
+
+======================================================================================================
+BitcoinPricePredictor(crypt="BTC",
+                    n_features=10, 
+                    n_steps=30, 
+                    n_outputs=30, 
+                    n_epochs=250, 
+                    batch_size=128).run_analysis()
+Test Loss: 0.002060865517705679
+['Close', 'Low', 'High', 'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt', 'volume_em', 'trend_aroon_up', 'trend_macd_diff', 'volume_obv']
