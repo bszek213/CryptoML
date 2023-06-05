@@ -3,9 +3,14 @@
 Deep learning, mainly LSTMs, for cryptocurrency with yfinance
 
 Current MAPE on test data for different cryptocurrencies:
-BTC: 127.45% error
+BTC: 2.21% error
 ETH: 184.52% error
-DOGE: 307.97% error
+DOGE: 245.15% error
+TRX: 108.81% error
+MANA: 171.94% error
+LTC: 114.19% error
+DOT: 105.18% error
+BCH: 136.55% error
 
 ## Installation
 ```bash

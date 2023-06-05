@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from datetime import datetime, timedelta
 import os
-from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
+from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, r2_score
 from colorama import Fore, Style
 from sys import argv
 
@@ -24,13 +24,58 @@ class changePricePredictor:
         temp = yf.Ticker(crypt_name)
         price_data = temp.history(period = 'max', interval="1d")
         print(Fore.GREEN,f'NUMBER OF SAMPLES FOR {crypt_name}: {len(price_data)}',Style.RESET_ALL)
-        self.features = ['Close', 'Low', 'High', 
-                         'momentum_stoch_rsi', 'trend_aroon_down', 'volume_vpt',
-                           'volume_em', 'trend_aroon_up', 
-                           'volume_obv','volatility_bbp']
-        self.non_close_features = ['Low', 'High', 'momentum_stoch_rsi', 
-                                   'trend_aroon_down', 'volume_vpt', 'volume_em',
-                                     'trend_aroon_up', 'volume_obv']
+        self.features = ['Close','Open', 'High', 'Low','Volume', 'Dividends', 'Stock Splits',
+                                    'volume_adi', 'volume_obv', 'volume_cmf', 'volume_fi', 'volume_em',
+                                    'volume_sma_em', 'volume_vpt', 'volume_vwap', 'volume_mfi',
+                                    'volume_nvi', 'volatility_bbm', 'volatility_bbh', 'volatility_bbl',
+                                    'volatility_bbw', 'volatility_bbp', 'volatility_bbhi',
+                                    'volatility_bbli', 'volatility_kcc', 'volatility_kch', 'volatility_kcl',
+                                    'volatility_kcw', 'volatility_kcp', 'volatility_kchi',
+                                    'volatility_kcli', 'volatility_dcl', 'volatility_dch', 'volatility_dcm',
+                                    'volatility_dcw', 'volatility_dcp', 'volatility_atr', 'volatility_ui',
+                                    'trend_macd', 'trend_macd_signal', 'trend_macd_diff', 'trend_sma_fast',
+                                    'trend_sma_slow', 'trend_ema_fast', 'trend_ema_slow',
+                                    'trend_vortex_ind_pos', 'trend_vortex_ind_neg', 'trend_vortex_ind_diff',
+                                    'trend_trix', 'trend_mass_index', 'trend_dpo', 'trend_kst',
+                                    'trend_kst_sig', 'trend_kst_diff', 'trend_ichimoku_conv',
+                                    'trend_ichimoku_base', 'trend_ichimoku_a', 'trend_ichimoku_b',
+                                    'trend_stc', 'trend_adx', 'trend_adx_pos', 'trend_adx_neg', 'trend_cci',
+                                    'trend_visual_ichimoku_a', 'trend_visual_ichimoku_b', 'trend_aroon_up',
+                                    'trend_aroon_down', 'trend_aroon_ind', 'trend_psar_up',
+                                    'trend_psar_down', 'trend_psar_up_indicator',
+                                    'trend_psar_down_indicator', 'momentum_rsi', 'momentum_stoch_rsi',
+                                    'momentum_stoch_rsi_k', 'momentum_stoch_rsi_d', 'momentum_tsi',
+                                    'momentum_uo', 'momentum_stoch', 'momentum_stoch_signal', 'momentum_wr',
+                                    'momentum_ao', 'momentum_roc', 'momentum_ppo', 'momentum_ppo_signal',
+                                    'momentum_ppo_hist', 'momentum_pvo', 'momentum_pvo_signal',
+                                    'momentum_pvo_hist', 'momentum_kama', 'others_dr', 'others_dlr',
+                                    'others_cr']
+        self.non_close_features = ['Open', 'High', 'Low','Volume', 'Dividends', 'Stock Splits',
+                                    'volume_adi', 'volume_obv', 'volume_cmf', 'volume_fi', 'volume_em',
+                                    'volume_sma_em', 'volume_vpt', 'volume_vwap', 'volume_mfi',
+                                    'volume_nvi', 'volatility_bbm', 'volatility_bbh', 'volatility_bbl',
+                                    'volatility_bbw', 'volatility_bbp', 'volatility_bbhi',
+                                    'volatility_bbli', 'volatility_kcc', 'volatility_kch', 'volatility_kcl',
+                                    'volatility_kcw', 'volatility_kcp', 'volatility_kchi',
+                                    'volatility_kcli', 'volatility_dcl', 'volatility_dch', 'volatility_dcm',
+                                    'volatility_dcw', 'volatility_dcp', 'volatility_atr', 'volatility_ui',
+                                    'trend_macd', 'trend_macd_signal', 'trend_macd_diff', 'trend_sma_fast',
+                                    'trend_sma_slow', 'trend_ema_fast', 'trend_ema_slow',
+                                    'trend_vortex_ind_pos', 'trend_vortex_ind_neg', 'trend_vortex_ind_diff',
+                                    'trend_trix', 'trend_mass_index', 'trend_dpo', 'trend_kst',
+                                    'trend_kst_sig', 'trend_kst_diff', 'trend_ichimoku_conv',
+                                    'trend_ichimoku_base', 'trend_ichimoku_a', 'trend_ichimoku_b',
+                                    'trend_stc', 'trend_adx', 'trend_adx_pos', 'trend_adx_neg', 'trend_cci',
+                                    'trend_visual_ichimoku_a', 'trend_visual_ichimoku_b', 'trend_aroon_up',
+                                    'trend_aroon_down', 'trend_aroon_ind', 'trend_psar_up',
+                                    'trend_psar_down', 'trend_psar_up_indicator',
+                                    'trend_psar_down_indicator', 'momentum_rsi', 'momentum_stoch_rsi',
+                                    'momentum_stoch_rsi_k', 'momentum_stoch_rsi_d', 'momentum_tsi',
+                                    'momentum_uo', 'momentum_stoch', 'momentum_stoch_signal', 'momentum_wr',
+                                    'momentum_ao', 'momentum_roc', 'momentum_ppo', 'momentum_ppo_signal',
+                                    'momentum_ppo_hist', 'momentum_pvo', 'momentum_pvo_signal',
+                                    'momentum_pvo_hist', 'momentum_kama', 'others_dr', 'others_dlr',
+                                    'others_cr']
         self.n_features = len(self.features)
         self.data = ta.add_all_ta_features(
             price_data,
@@ -41,19 +86,24 @@ class changePricePredictor:
             volume='Volume',
             fillna=True
         )
-        # print(self.data.columns)
+        print(self.data.columns)
 
     def prepare_data(self, data):
         # Extract relevant features
         data = self.data[self.features]
 
         # Scale data
-        # self.scaler1 = MinMaxScaler(feature_range=(0, 1))
-        self.scaler2 = MinMaxScaler(feature_range=(-1, 1))
-        # Scale data
-        data_close = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1)
-        # data_close = data[['Close']]
-        # data_close = self.scaler1.fit_transform(data_close)
+        self.scaler2 = MinMaxScaler(feature_range=(0, 1))
+        self.scaler1 = MinMaxScaler(feature_range=(0, 1))
+        # self.scaler2 = StandardScaler()
+        # self.scaler1 = StandardScaler()
+
+        # data_close = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1) #pct_change
+        
+        #Close price
+        data_close = data['Close'].to_numpy().reshape(-1, 1) #close price
+        data_close = self.scaler1.fit_transform(data_close)
+
         data_non_close = data[self.non_close_features]
         data_non_close = self.scaler2.fit_transform(data_non_close)
         data = np.concatenate((data_close, data_non_close), axis=1)
@@ -80,16 +130,16 @@ class changePricePredictor:
             initial_learning_rate=0.01,
             decay_steps=1000,
             decay_rate=0.9,
-            staircase=True
+            # staircase=True
         )
-        drop_val = 0.25
+        drop_val = 0.3
         model = tf.keras.models.Sequential([
-            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(9, activation='relu',return_sequences=True, input_shape=(self.n_steps, self.n_features))),
+            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10, activation='relu',return_sequences=True, input_shape=(self.n_steps, self.n_features))),
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dropout(drop_val),
-            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(8, activation='relu',return_sequences=True)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Dropout(drop_val),
+            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(5, activation='relu',return_sequences=False)),
+            # tf.keras.layers.BatchNormalization(),
+            # tf.keras.layers.Dropout(drop_val),
             # tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(7, activation='relu',return_sequences=True,)),
             # tf.keras.layers.BatchNormalization(),
             # tf.keras.layers.Dropout(drop_val),
@@ -99,9 +149,10 @@ class changePricePredictor:
             # tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(5, activation='relu',return_sequences=True,)),
             # tf.keras.layers.BatchNormalization(),
             # tf.keras.layers.Dropout(drop_val),
-            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(4, activation='relu')),
+            # tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(4, activation='relu')),
             tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Dense(self.n_outputs,activation="tanh")
+            # tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(self.n_outputs,activation="relu")
         ])
         model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=lr_schedule),loss='mean_squared_error')
         return model
@@ -117,6 +168,7 @@ class changePricePredictor:
                       batch_size=self.batch_size, 
                       validation_data=(X_val, y_val),
                       callbacks=[es],
+                      shuffle=False,
                       verbose=2)
             model.summary()
             self.model = model
@@ -129,12 +181,14 @@ class changePricePredictor:
 
     def predict(self, data):
         #save data for test
-        test = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1)[-self.n_steps:]
+        # test = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1)[-self.n_steps:] #pct_change
+        test = data['Close'].to_numpy().reshape(-1, 1)[-self.n_steps:] #close
         # Prepare data for prediction
         data = data[self.features]
-        data_close = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1)
+        # data_close = data['Close'].pct_change().fillna(method='bfill').to_numpy().reshape(-1, 1) #pct_change
+        data_close = data['Close'].to_numpy().reshape(-1, 1) #close
+        data_close = self.scaler1.transform(data_close)
         data_non_close = data[self.non_close_features]
-        # data_close = self.scaler1.transform(data_close)
         data_non_close = self.scaler2.transform(data_non_close)
         data = np.concatenate((data_close, data_non_close), axis=1)
 
@@ -142,19 +196,22 @@ class changePricePredictor:
         if argv[2] == "test":
             # Make prediction on test data
             X_pred = np.array([data[-self.n_steps*2:-self.n_steps, :]])
+            #pct-change
+            # y_pred = self.model.predict(X_pred)
+            # y_pred = y_pred.flatten()
+            #close
             y_pred = self.model.predict(X_pred)
-            y_pred = y_pred.flatten()
+            y_pred = self.scaler1.inverse_transform(y_pred)[0]
+
             print(Fore.RED,y_pred,Style.RESET_ALL)
             print(Fore.GREEN,test.flatten(),Style.RESET_ALL)
-            plt.hist(y_pred,color='r',alpha=0.3)
-            plt.hist(test.flatten(),color='g',alpha=0.3)
-            plt.show()
-            # y_pred = self.scaler1.inverse_transform(y_pred)[0]
 
             #check accuracy of prediction   
             correct = 0
             incorrect = 0  
-            for test_val, pred_val in zip(test.flatten(),y_pred):
+            test_pct = np.diff(test.flatten())
+            y_pred_pct = np.diff(y_pred)
+            for test_val, pred_val in zip(test_pct,y_pred_pct):
                 if test_val < 0 and pred_val < 0:
                     correct += 1
                 elif test_val > 0 and pred_val > 0:
@@ -166,10 +223,15 @@ class changePricePredictor:
             print('=======================================')
             print(Fore.YELLOW, f'MAPE test data: {round(mean_absolute_percentage_error(test.flatten(),y_pred)*100,2)} %',Style.RESET_ALL)
             print(Fore.YELLOW, f'RMSE test data: {round(mean_squared_error(test.flatten(),y_pred,squared=False),10)}',Style.RESET_ALL)
+            print(Fore.YELLOW, "R2 score test data:", r2_score(test.flatten(),y_pred),Style.RESET_ALL)
             print('=======================================')
             print(Fore.GREEN,f'correct direction: {correct / (correct + incorrect)}',Style.RESET_ALL,
                 Fore.RED,f'incorrect direction: {incorrect / (correct + incorrect)}',Style.RESET_ALL)
             print('=======================================')
+            plt.plot(y_pred,color='r',marker='*',alpha=0.3,label='pred')
+            plt.plot(test.flatten(),marker='*',color='g',alpha=0.3,label='test')
+            plt.legend()
+            plt.show()
             # # Prepare data for prediction
             # data = data[['Close', 'Low', 'High', 'MACD', 'RSI']]
             # data = self.scaler.transform(data)
@@ -183,6 +245,7 @@ class changePricePredictor:
         else:
             X_pred = np.array([data[-self.n_steps:, :]])
             y_pred = self.model.predict(X_pred)
+            y_pred = self.scaler1.inverse_transform(y_pred)[0]
             y_pred = y_pred.flatten()
             print(Fore.GREEN,f'next {self.n_steps} days for {self.crypt_name}: {y_pred}',Style.RESET_ALL)
 
@@ -191,11 +254,11 @@ class changePricePredictor:
     def plot_results(self):
         pred = pd.read_csv(f'{self.crypt_name}_pred.csv')
         # plt.plot(self.data['Close'], label='Actual')
-        plt.plot(pred['date'],pred['pred'], label='Predicted')
+        plt.plot(pred['date'],pred['pred'], marker='*',label='Predicted')
         plt.title(f'{self.crypt_name} Close Price Prediction')
         plt.xlabel('Date')
         plt.ylabel('Close Price (USD)')
-        plt.xticks(rotation=90)
+        plt.xticks(rotation=45)
         plt.legend()
         plt.show()
 
