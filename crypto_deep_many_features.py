@@ -242,6 +242,7 @@ class changePricePredictor:
             # print(y_pred)
             # y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, self.n_features))[0]  
             # # y_pred = y_pred[:, 0] # extract only the predicted Close prices
+            return y_pred, self.data.index[-1], test
         else:
             X_pred = np.array([data[-self.n_steps:, :]])
             y_pred = self.model.predict(X_pred)
@@ -249,7 +250,7 @@ class changePricePredictor:
             y_pred = y_pred.flatten()
             print(Fore.GREEN,f'next {self.n_steps} days for {self.crypt_name}: {y_pred}',Style.RESET_ALL)
 
-        return y_pred, self.data.index[-1]
+            return y_pred, self.data.index[-1], 0
     
     def plot_results(self):
         pred = pd.read_csv(f'{self.crypt_name}_pred.csv')
@@ -272,7 +273,7 @@ class changePricePredictor:
         self.evaluate_model(X_test,y_test)
     
         # Make prediction for the next 30 days
-        prediction, last_date = self.predict(self.data)
+        prediction, last_date, test = self.predict(self.data)
         if argv[2] != "test":
             print(pd.to_datetime(last_date))
             start_date = pd.to_datetime(last_date).date() + timedelta(days=1)
